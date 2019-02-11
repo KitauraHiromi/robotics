@@ -5,6 +5,7 @@
 #include <vector>
 #define DEG(rad) rad*180./M_PI
 #define RAD(deg) deg*M_PI/180.
+#define MAX_N 100
 using namespace std;
 using namespace Eigen;
 typedef Matrix<double, 4, 4> tform; // 同次変換行列
@@ -15,8 +16,8 @@ class dh
 public:
     dh();
     ~dh();
-    int n;
-    vector<vd> param; //{a, d, alpha}
+    unsigned int n;
+    vector<double> param[MAX_N]; //{{a_0, d_0, alpha_0}, {a_1, d_1, alpha_1}, ...}
     tform h(vd param, double theta);
 };
 
@@ -47,7 +48,7 @@ tform dh::h(vd param, double theta){
 dh make_puma(double l1, double l2, double l3){
     dh puma;
     puma.n = 6;
-    puma.param.resize(puma.n);
+    for(unsigned int i=0; i<puma.n; i++) puma.param[i].resize(3);
     puma.param[0][0] = 0; puma.param[0][1] = -RAD(90); puma.param[0][2] = 0;
     puma.param[1][0] = l1; puma.param[1][1] = RAD(0); puma.param[1][2] = 0;
     puma.param[2][0] = 0; puma.param[2][1] = RAD(180); puma.param[2][2] = 0;
