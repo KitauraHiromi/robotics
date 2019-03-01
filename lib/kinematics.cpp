@@ -1,5 +1,4 @@
-#include"dh.hpp"
-#include <random>
+#include "kinematics.hpp"
 
 mt19937 mt;
 uniform_real_distribution<double> th;
@@ -19,13 +18,17 @@ tform fk(dh link, vd theta){
     return end_effector_pos;
 }
 
+vd ik(dh link, tform pos){
+    
+}
+
 void test_fk(){
     cout << "test_fk in" << endl;
     vd theta(6);
     double l1, l2, l3; l1 = l2 = l3 = 1;
 
     init_random();
-    for(unsigned int i=0; i<theta.size(); i++) theta[i] = th(mt);
+    for(unsigned int i=0; i<theta.size(); i++) theta[i] = RAD(th(mt));
     cout << "random initialized" << endl;
 
     dh puma = make_puma(l1, l2, l3);

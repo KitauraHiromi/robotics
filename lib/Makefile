@@ -1,7 +1,9 @@
 INCLUDS =
-LIBS =
+LIBS = dh.o
 OPTS = -g -O0 -Wall -Wextra -std=c++11
 CXX = g++
 
-kinematics:kinematics.cpp
+dh.o:dh.cpp
+	${CXX} ${INCLUDES} -c $< ${LIBS} ${OPTS}
+kinematics:kinematics.cpp dh.o
 	${CXX} ${INCLUDES} -o $@ $< ${LIBS} ${OPTS}
