@@ -6,7 +6,7 @@ const int MAX_N = 100;
 class dh{
 public:
     unsigned int n;
-    vector<double> param[MAX_N]; //{{a_0, d_0, alpha_0}, {a_1, d_1, alpha_1}, ...}
+    vector<double> param[MAX_N]; //{{a0, alpha0, d0}, {a1, alpha1, d1}, ...}
     tform h(vd param, double theta);
 };
 

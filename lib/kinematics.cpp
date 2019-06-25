@@ -12,15 +12,16 @@ void init_random(){
 tform fk(dh link, vd theta){
     if(theta.size() != (unsigned int)link.n) throw invalid_argument("dimension must be same");
     tform end_effector_pos = tform::Identity();
-    for(unsigned int i=0; i<link.n; i++)
+    for(unsigned int i=0; i<link.n; i++){
         end_effector_pos *= link.h(link.param[i], theta[i]);
+    }
     vd ret(6, 0);
     return end_effector_pos;
 }
 
-vd ik(dh link, tform pos){
-    
-}
+// vd puma_ik(dh link, tform pos){
+
+// }
 
 void test_fk(){
     cout << "test_fk in" << endl;
@@ -84,6 +85,12 @@ int main(){
     // link.param = vector<vd>(2, vd({0., 1., RAD(90)}));
     // vd theta({0, 0});
     // cout << fk(link, theta) << endl;;
+
+    // dh puma = make_puma(1, 1, 1);
+    // vd theta(6, 0);
+    // cout << fk(puma, theta) << endl;
+
     test_fk();
+
     return 0;
 }
