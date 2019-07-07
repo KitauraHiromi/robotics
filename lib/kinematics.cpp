@@ -117,10 +117,6 @@ void test_ik(){
     vd theta(6);
     double l1, l2, l3; l1 = l2 = l3 = 1;
 
-    init_random();
-    for(unsigned int i=0; i<theta.size(); i++) theta[i] = RAD(th(mt));
-    cout << "random initialized" << endl;
-
     dh puma = make_puma(l1, l2, l3);
     cout << "puma initialized" << endl;
 
@@ -132,6 +128,45 @@ void test_ik(){
     auto joints = puma_ik(puma, pos);
     for(auto e: joints) cout << e << " ";
     cout << endl;
+}
+
+void test_ik2(){
+    cout << "test_ik2 in" << endl;
+    vd theta(6);
+    double l1, l2, l3; l1 = l2 = l3 = 1;
+
+    dh puma = make_puma(l1, l2, l3);
+    cout << "puma initialized" << endl;
+
+    tform pos;
+    char str[256];
+    double a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p;
+    ifstream ifs("ik_test_set.txt");
+    ofstream ofs("ik_test_result.txt");
+    while(ifs && ifs.getline(str, 256 - 1)){
+        sscanf(str,
+            "%lf, %lf, %lf, %lf,"
+            "%lf, %lf, %lf, %lf,"
+            "%lf, %lf, %lf, %lf,"
+            "%lf, %lf, %lf, %lf,"
+            "%lf, %lf, %lf, %lf\n", 
+            &a, &b, &c, &d,
+            &e, &f, &g, &h,
+            &i, &j, &k, &l,
+            &m, &n, &o, &p);
+
+        pos << a, b, c, d,
+               e, f, g, h,
+               i, j, k, l,
+               m, n, o, p;
+        auto joints = puma_ik(puma, pos);
+        for(auto e: joints){
+            cout << e << " ";
+            ofs << e << " ";
+        }
+        cout << endl;
+        ofs << endl;
+    }
 }
 
 int main(){
@@ -146,7 +181,7 @@ int main(){
     // cout << fk(puma, theta) << endl;
 
     test_fk();
-    test_ik();
+    test_ik2();
 
     return 0;
 }
