@@ -19,9 +19,42 @@ tform fk(dh link, vd theta){
     return end_effector_pos;
 }
 
-// vd puma_ik(dh link, tform pos){
+vd puma_ik(dh link, tform pos){
+    vd ret(6, 0);
+    double x, y, z, l1, l2, l;
+    x = pos(0, 3);
+    y = pos(1, 3);
+    z = pos(2, 3);
+    l1 = link.param[1][0];
+    l2 = link.param[3][2];
+    l = sqrt(x*x + y*y);
 
-// }
+    // θ1, θ2, θ3: defined from ps(xs, ys, zs)
+    vd ps(3, 0);
+    ps[0] = x - pos(0, 2);
+    ps[1] = y - pos(1, 2);
+    ps[2] = z - pos(2, 2);
+
+    // debug
+    // cout << x << " " << y << " " << z  << " " << l << endl;
+    // cout << ps[0] << " " << ps[1] << " " << ps[2] << endl;
+    // cout << asin(-1.0 / (2*l1*sqrt(l*l+ps[2]*ps[2])) * (l*l+l1*l1-l2*l2+ps[2]*ps[2])) << endl;
+    // cout << atan2(l, ps[2]) << endl;
+    // cout << -1.0 / (2*l1*sqrt(l*l+ps[2]*ps[2])) * (l*l+l1*l1-l2*l2+ps[2]*ps[2]) << endl;
+    ret[0] = atan2(y, x);
+    ret[1] = asin(-1.0 / (2*l1*sqrt(l*l+ps[2]*ps[2])) * (l*l+l1*l1-l2*l2+ps[2]*ps[2])) + atan2(l, ps[2]);
+    ret[2] = acos(ps[2]/l2 + l1/l2*sin(ret[1]));
+
+    zyz_eular(pos, ret[3], ret[4], ret[5]);
+
+    return ret;
+}
+
+void zyz_eular(tform h, double& alpha, double& beta, double& gamma){
+    alpha = atan2(h(1, 2), h(0, 2));
+    beta = atan2(h(0, 2)*cos(alpha) + h(1, 2)*sin(alpha), h(2, 2));
+    gamma = atan2(-h(1, 1)*sin(alpha) + h(1, 0)*cos(alpha), -h(0, 1)*sin(alpha) + h(1, 1)*cos(alpha)); 
+}
 
 void test_fk(){
     cout << "test_fk in" << endl;
@@ -79,6 +112,28 @@ void test_fk(){
     return;
 }
 
+void test_ik(){
+    cout << "test_ik in" << endl;
+    vd theta(6);
+    double l1, l2, l3; l1 = l2 = l3 = 1;
+
+    init_random();
+    for(unsigned int i=0; i<theta.size(); i++) theta[i] = RAD(th(mt));
+    cout << "random initialized" << endl;
+
+    dh puma = make_puma(l1, l2, l3);
+    cout << "puma initialized" << endl;
+
+    tform pos;
+    pos << 1, 0, 0, 1,
+           0, 1, 0, 0,
+           0, 0, 1, 2,
+           0, 0, 0, 1;
+    auto joints = puma_ik(puma, pos);
+    for(auto e: joints) cout << e << " ";
+    cout << endl;
+}
+
 int main(){
     // dh link;
     // link.n = 2;
@@ -91,6 +146,7 @@ int main(){
     // cout << fk(puma, theta) << endl;
 
     test_fk();
+    test_ik();
 
     return 0;
 }
