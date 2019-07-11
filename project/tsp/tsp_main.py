@@ -4,6 +4,23 @@ import numpy as np
 from tkinter import *
 from pca import *
 
+
+filename = "test.txt"
+
+def read_joint_angle_file(filename):
+
+	pattern = ".*?([-]?\d+[.]?\d*, [-]?\d+[.]?\d*, [-]?\d+[.]?\d*, [-]?\d+[.]?\d*, [-]?\d+[.]?\d*, [-]?\d+[.]?\d*).*"
+	x = []
+	repatter = re.compile(pattern)
+
+	with open(filename, "r") as f:
+		for line in f:
+			result = repatter.match(line)
+			s = result.group(1)
+			print(s)
+			x.append(list(map(float, s.split(","))))
+	return np.array(x)
+
 def draw_result(point_table, path):
 	point_table *= 100
 	point_table += 400
@@ -19,7 +36,8 @@ def draw_result(point_table, path):
 	root.mainloop()
 
 def main():
-	x = np.loadtxt("ik_test_result.txt")
+	# x = np.loadtxt("ik_test_result.txt")
+	x = read_joint_angle_file(filename)
 	distance_table = make_distance_table(x)
 	print(distance_table)
 	print(distance_table.shape)
@@ -40,6 +58,8 @@ def main():
 		point_table = x
 	draw_result(point_table, path_optimize1)
 	draw_result(point_table, path_optimize2)
+	print(path_optimize1)
+	print(path_optimize2)
 
 if __name__ == "__main__":
 	main()
