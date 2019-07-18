@@ -6,6 +6,8 @@
 # greedy1: クラスカルのアルゴリズムの応用
 # devide_merge: 分割統治法
 
+import numpy as np
+import copy
 
 INF = 10000000000
 
@@ -14,7 +16,7 @@ INF = 10000000000
 ########################################
 def greedy0(start, distance_table):
     size = distance_table.shape[0]
-    path = [i for i in range(size)]
+    path = np.array([i for i in range(size)])
     path[0], path[start] = path[start], path[0]
     for i in range(size - 1):
         min_len = INF
@@ -165,6 +167,7 @@ def greedy0(start, distance_table):
 # 2-opt 法
 # O(N^2*M) M:変換が行われなくなるまでのループ回数
 def opt_2(path, distance_table):
+    _path = copy.deepcopy(path)
     size = distance_table.shape[0]
     total = 0
     while True:
@@ -178,23 +181,44 @@ def opt_2(path, distance_table):
                 else:
                     j1 = j + 1
                 if i != 0 or j1 != 0:
-                    l1 = distance_table[path[i]][path[i1]]
-                    l2 = distance_table[path[j]][path[j1]]
-                    l3 = distance_table[path[i]][path[j]]
-                    l4 = distance_table[path[i1]][path[j1]]
+                    l1 = distance_table[_path[i]][_path[i1]]
+                    l2 = distance_table[_path[j]][_path[j1]]
+                    l3 = distance_table[_path[i]][_path[j]]
+                    l4 = distance_table[_path[i1]][_path[j1]]
                     if l1 + l2 > l3 + l4:
                         # つなぎかえる
-                        new_path = path[i1:j+1]
-                        path[i1:j+1] = new_path[::-1]
+                        new_path = _path[i1:j+1]
+                        _path[i1:j+1] = new_path[::-1]
                         count += 1
         total += count
         if count == 0: break
     # totalはoptimize用。optimizeとはreturnが異なるので、こちらをdrawするのはお勧めしない。
-    return path, total
+    return _path, total
+
+# 2-optの隣接点だけバージョン。neiborhood1で使う。
+def neiborhood_opt(path, distance_table):
+    _path = copy.deepcopy(path)
+    size = distance_table.shape[0]
+    for i in range(1, size - 1, 2):
+        i1 = i + 1
+        i2 = i + 2
+        if i2 > size - 1:
+            i2 = 0
+        l1 = distance_table[_path[i-1]][_path[i]]
+        l2 = distance_table[_path[i1]][_path[i2]]
+        l3 = distance_table[_path[i-1]][_path[i1]]
+        l4 = distance_table[_path[i]][_path[i2]]
+        if l1 + l2 > l3 + l4:
+            # iとi1を反転させる
+            new_path = _path[i:i+2]
+            _path[i:i+2] = new_path[::-1]
+    # totalはoptimize用。optimizeとはreturnが異なるので、こちらをdrawするのはお勧めしない。
+    return _path
 
 # or-opt 法 (簡略版)
 # O(N^2*M) M:変換が行われなくなるまでのループ回数
 def or_opt(path, distance_table):
+    _path = copy.deepcopy(path)
     size = distance_table.shape[0]
     total = 0
     while True:
@@ -210,25 +234,25 @@ def or_opt(path, distance_table):
                 j1 = j + 1
                 if j1 == size: j1 = 0
                 if j != i and j1 != i:
-                    l1 = distance_table[path[i0]][path[i]]  # i0 - i - i1
-                    l2 = distance_table[path[i]][path[i1]]
-                    l3 = distance_table[path[j]][path[j1]]  # j - j1
-                    l4 = distance_table[path[i0]][path[i1]] # i0 - i1
-                    l5 = distance_table[path[j]][path[i]]   # j - i - j1
-                    l6 = distance_table[path[i]][path[j1]] 
+                    l1 = distance_table[_path[i0]][_path[i]]  # i0 - i - i1
+                    l2 = distance_table[_path[i]][_path[i1]]
+                    l3 = distance_table[_path[j]][_path[j1]]  # j - j1
+                    l4 = distance_table[_path[i0]][_path[i1]] # i0 - i1
+                    l5 = distance_table[_path[j]][_path[i]]   # j - i - j1
+                    l6 = distance_table[_path[i]][_path[j1]] 
                     if l1 + l2 + l3 > l4 + l5 + l6:
                         # つなぎかえる
-                        p = path[i]
-                        path[i:i + 1] = []
+                        p = _path[i]
+                        _path[i:i + 1] = []
                         if i < j:
-                            path[j:j] = [p]
+                            _path[j:j] = [p]
                         else:
-                            path[j1:j1] = [p]
+                            _path[j1:j1] = [p]
                         count += 1
         total += count
         if count == 0: break
     # totalはoptimize用。optimizeとはreturnが異なるので、こちらをdrawするのはお勧めしない。
-    return path, total
+    return _path, total
 
 # 組み合わせ
 def optimize1(path, distance_table):
@@ -242,3 +266,4 @@ def optimize2(path, distance_table):
         path, _ = or_opt(path, distance_table)
         path, flag = opt_2(path, distance_table)
         if flag == 0: return path
+

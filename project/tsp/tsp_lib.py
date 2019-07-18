@@ -21,6 +21,25 @@ def distance(a, b):
 	ret = math.sqrt(ret)
 	return ret
 
+# 隣接点の距離を0にする(片方を通ったら、必ずもう片方を通る必要がある制約を最適化の中で解く)
+def neiborhood_zero_distance(distance_table, neiborhoods):
+	for neiborhood in neiborhoods:
+		a, b = neiborhood
+		distance_table[a][b] = 0
+		distance_table[b][a] = 0
+
+# 隣接点を平均化して一つの点とみなす
+def make_distance_table_neiborhood_merge(x):
+	num, dim = x.shape
+	assert(num % 2 == 1)
+	# 0番目の点は隣接点なし
+	num = int(num / 2) + 1
+	# table = np.ones((num, num))
+	table = np.zeros((num, num))
+	for i in range(1, num):
+		for j in range(num):
+			table[i][j] = distance((x[i] + x[i+1]) / 2, (x[j] + x[j+1]) / 2)
+	return table
 
 # 経路の表示
 def draw_path(c0, path):
