@@ -5,11 +5,11 @@
 # greedy0: 貪欲法
 # greedy1: クラスカルのアルゴリズムの応用
 # devide_merge: 分割統治法
-
+from tsp_lib import *
+from functools import cmp_to_key
 import numpy as np
 import copy
 
-INF = 10000000000
 
 ########################################
 # 単純な欲張り法
@@ -73,92 +73,97 @@ def greedy0(start, distance_table):
 # 分割統治法
 ###########################################
 
-# # 分割する方向を決定する
-# # ここ、多次元の場合どうなる？
-# def divide_direction(buff):
-#     x1 = min(map(lambda x: x[0], buff))
-#     y1 = min(map(lambda x: x[1], buff))
-#     x2 = max(map(lambda x: x[0], buff))
-#     y2 = max(map(lambda x: x[1], buff))
-#     return x2 - x1 > y2 - y1
 
-# # 分割する
-# def divide(buff, comp):
-#     buff.sort(comp)
-#     n = len(buff) / 2
-#     buff1 = buff[:(n+1)]
-#     buff2 = buff[n:]
-#     return buff[n], buff1, buff2
+# 分割する次元を決定する
+def divide_direction(buff):
+    assert(len(buff) > 0)
+    subd_list = []
+    for i in range(len(buff[0])):
+        subd_list.append(max(map(lambda x: x[i], buff)) - min(map(lambda x: x[i], buff)))
+    # 分割される次元を表すintを返す
+    return argmax(subd_list)
 
-# # 差分を計算する
-# def differ(p, c, q):
-#     return distance(p, c) + distance(c, q) - distance(p, q)
+# 分割する
+def divide(buff, comp):
+    sorted(buff, key = cmp_to_key(comp))
+    n = len(buff) // 2
+    buff1 = buff[:n+1]
+    buff2 = buff[n:]
+    return buff[n], buff1, buff2
 
-# # 共有点を探す
-# def search(x, buff):
-#     for i in range(len(buff)):
-#         if buff[i] == x:
-#             if i == 0: return len(buff) - 1, i, i + 1
-#             if i == len(buff) - 1: return i - 1, i, 0
-#             return i - 1, i, i + 1
+# 差分を計算する
+def differ(p, c, q):
+    return distance(p, c) + distance(c, q) - distance(p, q)
 
-# # 挿入するための新しい経路を作る
-# def make_new_path(buff, c, succ):
-#     path = []
-#     i = c + succ
-#     while True:
-#         if i < 0: i = len(buff) - 1
-#         elif i >= len(buff): i = 0
-#         if i == c: break
-#         path.append(buff[i])
-#         i += succ
-#     return path
+# 共有点を探す
+def search(x, buff):
+    for i in range(len(buff)):
+        # if buff[i] == x:
+        if np.array_equal(buff[i], x):
+            if i == 0: return len(buff) - 1, i, i + 1
+            if i == len(buff) - 1: return i - 1, i, 0
+            return i - 1, i, i + 1
 
-# # 併合する
-# # buff1 = [a, b, c, d, e]
-# # buff2 = [f, g, c, h, i]
-# # (1) b - g => [a, b, g, f, i, h, c, d, e]
-# # (2) d - h => [a, b, c, g, f, i, h, d, e]
-# # (3) b - h => [a, b, h, i, f. g. c, d, e]
-# # (4) d - g => [a, b. c. h, i, f, g, d, e]
-# def merge(buff1, buff2, p):
-#     # 共有ポイントを探す
-#     p1, i1, n1 = search(p, buff1)
-#     p2, i2, n2 = search(p, buff2)
-#     # 差分を計算
-#     d1 = differ(buff1[p1], p, buff2[p2])
-#     d2 = differ(buff1[n1], p, buff2[n2])
-#     d3 = differ(buff1[p1], p, buff2[n2])
-#     d4 = differ(buff1[n1], p, buff2[p2])
-#     # 差分が一番大きいものを選択
-#     d = max(d1, d2, d3, d4)
-#     if d1 == d:
-#         # (1)
-#         buff1[i1:i1] = make_new_path(buff2, i2, -1)
-#     elif d2 == d:
-#         # (2)
-#         buff1[n1:n1] = make_new_path(buff2, i2, -1)
-#     elif d3 == d:
-#         # (3)
-#         buff1[i1:i1] = make_new_path(buff2, i2, 1)
-#     else:
-#         # (4)
-#         buff1[n1:n1] = make_new_path(buff2, i2, 1)
-#     return buff1
+# 挿入するための新しい経路を作る
+def make_new_path(buff, c, succ):
+    path = []
+    i = c + succ
+    while True:
+        if i < 0: i = len(buff) - 1
+        elif i >= len(buff): i = 0
+        if i == c: break
+        path.append(buff[i])
+        i += succ
+    return path
 
-# # 分割統治法による解法
-# def divide_merge(buff):
-#     if len(buff) <= 3:
-#         # print buff
-#         return buff
-#     else:
-#         if divide_direction(buff):
-#             p, b1, b2 = divide(buff, lambda x, y: x[0] - y[0])
-#         else:
-#             p, b1, b2 = divide(buff, lambda x, y: x[1] - y[1])
-#         b3 = divide_merge(b1)
-#         b4 = divide_merge(b2)
-#         return merge(b3, b4, p)
+# 併合する
+# buff1 = [a, b, c, d, e]
+# buff2 = [f, g, c, h, i]
+# (1) b - g => [a, b, g, f, i, h, c, d, e]
+# (2) d - h => [a, b, c, g, f, i, h, d, e]
+# (3) b - h => [a, b, h, i, f. g. c, d, e]
+# (4) d - g => [a, b. c. h, i, f, g, d, e]
+def merge(buff1, buff2, p):
+    # 共有ポイントを探す
+    p1, i1, n1 = search(p, buff1)
+    p2, i2, n2 = search(p, buff2)
+    # 差分を計算
+    d1 = differ(buff1[p1], p, buff2[p2])
+    d2 = differ(buff1[n1], p, buff2[n2])
+    d3 = differ(buff1[p1], p, buff2[n2])
+    d4 = differ(buff1[n1], p, buff2[p2])
+    # 差分が一番大きいものを選択
+    d = max(d1, d2, d3, d4)
+    if d1 == d:
+        # (1)
+        # buff1[i1:i1] = make_new_path(buff2, i2, -1)
+        buff1 = np.insert(buff1, i1, make_new_path(buff2, i2, -1), axis=0)
+    elif d2 == d:
+        # (2)
+        # buff1[n1:n1] = make_new_path(buff2, i2, -1)
+        buff1 = np.insert(buff1, n1, make_new_path(buff2, i2, -1), axis=0)
+    elif d3 == d:
+        # (3)
+        # buff1[i1:i1] = make_new_path(buff2, i2, 1)
+        buff1 = np.insert(buff1, i1, make_new_path(buff2, i2, 1), axis=0)
+
+    else:
+        # (4)
+        # buff1[n1:n1] = make_new_path(buff2, i2, 1)
+        buff1 = np.insert(buff1, n1, make_new_path(buff2, i2, 1), axis=0)
+    return buff1
+
+# 分割統治法による解法
+def divide_merge(buff):
+    if len(buff) <= 3:
+        # print buff
+        return buff
+    else:
+        d = divide_direction(buff)
+        p, b1, b2 = divide(buff, lambda x, y: x[d] - y[d])
+        b3 = divide_merge(b1)
+        b4 = divide_merge(b2)
+        return merge(b3, b4, p)
 
 ###########################################
 # 局所探索法
@@ -243,16 +248,21 @@ def or_opt(path, distance_table):
                     if l1 + l2 + l3 > l4 + l5 + l6:
                         # つなぎかえる
                         p = _path[i]
-                        _path[i:i + 1] = []
+                        # _path[i:i + 1] = []
+                        _path = np.delete(_path, i)
                         if i < j:
-                            _path[j:j] = [p]
+                            # _path[j:j] = [p]
+                            _path = np.insert(_path, j, p, axis=0)
                         else:
-                            _path[j1:j1] = [p]
+                            # _path[j1:j1] = [p]
+                            _path = np.insert(_path, j1, p, axis=0)
+
                         count += 1
         total += count
         if count == 0: break
     # totalはoptimize用。optimizeとはreturnが異なるので、こちらをdrawするのはお勧めしない。
     return _path, total
+
 
 # 組み合わせ
 def optimize1(path, distance_table):
