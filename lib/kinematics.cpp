@@ -1,59 +1,110 @@
 #include "kinematics.hpp"
 
-mt19937 mt;
-uniform_real_distribution<double> th;
+// void init_random(mt19937 &mt, uniform_real_distribution<double> &th, double lbound, double ubound){
+//     assert(lbound < ubound);
+//     std::random_device rd;
+//     mt = mt19937(rd());
+//     th = uniform_real_distribution<double>(lbound, ubound);
+// }
 
-void init_random(){
-    std::random_device rd;
-    mt = mt19937(rd());
-    th = uniform_real_distribution<double>(-180, 180);
-}
 
 tform fk(dh link, vd theta){
-    if(theta.size() != (unsigned int)link.n) throw invalid_argument("dimension must be same");
+    assert(theta.size() == (unsigned int)link.n);
     tform end_effector_pos = tform::Identity();
     for(unsigned int i=0; i<link.n; i++){
         end_effector_pos *= link.h(link.param[i], theta[i]);
     }
-    vd ret(6, 0);
     return end_effector_pos;
 }
 
-vd puma_ik(dh link, tform pos){
+vd puma_ik(dh link, tform h){
     vd ret(6, 0);
-    double x, y, z, l1, l2, l;
-    x = pos(0, 3);
-    y = pos(1, 3);
-    z = pos(2, 3);
+    double x, y, z, l1, l2, l3, l;
+    x = h(0, 3);
+    y = h(1, 3);
+    z = h(2, 3);
     l1 = link.param[1][0];
     l2 = link.param[3][2];
-    l = sqrt(x*x + y*y);
-
+    l3 = link.param[5][2];
+    cout << "length:" << l1 << " " << l2 << " " << l3 << endl;
     // θ1, θ2, θ3: defined from ps(xs, ys, zs)
     vd ps(3, 0);
-    ps[0] = x - pos(0, 2);
-    ps[1] = y - pos(1, 2);
-    ps[2] = z - pos(2, 2);
+    ps[0] = x - l3 * h(0, 2);
+    ps[1] = y - l3 * h(1, 2);
+    ps[2] = z - l3 * h(2, 2);
+    cout << "xyz:" << x << " " << y << " " << z << endl;
+    cout << "pxpypz:" << ps[0] << " " << ps[1] << " " << ps[2] << endl; 
+    l = sqrt(ps[0]*ps[0] + ps[1]*ps[1]);
 
-    // debug
-    // cout << x << " " << y << " " << z  << " " << l << endl;
-    // cout << ps[0] << " " << ps[1] << " " << ps[2] << endl;
-    // cout << asin(-1.0 / (2*l1*sqrt(l*l+ps[2]*ps[2])) * (l*l+l1*l1-l2*l2+ps[2]*ps[2])) << endl;
-    // cout << atan2(l, ps[2]) << endl;
-    // cout << -1.0 / (2*l1*sqrt(l*l+ps[2]*ps[2])) * (l*l+l1*l1-l2*l2+ps[2]*ps[2]) << endl;
-    ret[0] = atan2(y, x);
-    ret[1] = asin(-1.0 / (2*l1*sqrt(l*l+ps[2]*ps[2])) * (l*l+l1*l1-l2*l2+ps[2]*ps[2])) + atan2(l, ps[2]);
-    ret[2] = acos(ps[2]/l2 + l1/l2*sin(ret[1]));
+    ret[0] = atan2(ps[1], ps[0]);
 
-    zyz_eular(pos, ret[3], ret[4], ret[5]);
+    double alpha, beta;
+    alpha = acos((l1*l1 + l2*l2 - l*l - ps[2]*ps[2]) / (2 * l1 * l2));
+    // alpha = (alpha > M_PI/2) ? alpha - M_PI : alpha;
+    beta = acos((l*l + ps[2]*ps[2] + l1*l1 - l2*l2) / (2 * l1 * sqrt(l*l + ps[2]*ps[2])));
+    cout << "alpha, beta:" << alpha << " " << beta << endl;
 
+    ret[1] = -atan2(ps[2], l) + beta;
+    ret[2] = -M_PI / 2 + alpha;
+
+    tform h03_t = fk(link, ret);
+    h03_t.transposeInPlace();
+    zyz_eular(h03_t * h, ret[3], ret[4], ret[5]);
     return ret;
 }
 
 void zyz_eular(tform h, double& alpha, double& beta, double& gamma){
+    // ジンバルロックは判定しない
     alpha = atan2(h(1, 2), h(0, 2));
     beta = atan2(h(0, 2)*cos(alpha) + h(1, 2)*sin(alpha), h(2, 2));
     gamma = atan2(-h(1, 1)*sin(alpha) + h(1, 0)*cos(alpha), -h(0, 1)*sin(alpha) + h(1, 1)*cos(alpha)); 
+}
+
+
+void xyz_eular(tform h, double& alpha, double& beta, double& gamma){
+    // ジンバルロックは判定しない
+    alpha = atan2(-h(1, 2), h(2, 2));
+    beta = asin(h(0, 2));
+    gamma = atan2(-h(0, 1), h(0, 0)); 
+}
+
+tform rot_x(double x){
+    tform ret;
+    ret << 1,      0,       0, 0,
+           0, sin(x), -cos(x), 0,
+           0, cos(x),  sin(x), 0,
+           0,      0,       0, 1;
+    return ret;
+}
+
+
+tform rot_y(double y){
+    tform ret;
+    ret <<  cos(y), 0, sin(y), 0,
+                 0, 1,      0, 0,
+           -sin(y), 0, cos(y), 0,
+                 0, 0,      0, 1;
+    return ret;
+}
+
+tform rot_z(double z){
+    tform ret;
+    ret <<  cos(z), -sin(z), 0, 0,
+           -sin(z),  cos(z), 0, 0,
+                 0,       0, 1, 0,
+                 0,       0, 0, 1;
+    return ret;
+}
+
+tform pos_to_tform_xyz_eular(vd pos){
+    assert(pos.size() == 6);
+    tform h;
+    h << 1, 0, 0, pos[0],
+         0, 1, 0, pos[1],
+         0, 0, 1, pos[2],
+         0, 0, 0, 1;
+    h *= rot_x(pos[3]) * rot_y(pos[4]) * rot_z(pos[5]);
+    return h;
 }
 
 void test_fk(){
@@ -61,7 +112,13 @@ void test_fk(){
     vd theta(6);
     double l1, l2, l3; l1 = l2 = l3 = 1;
 
-    init_random();
+    // init random
+    mt19937 mt;
+    uniform_real_distribution<double> th;
+    std::random_device rd;
+    mt = mt19937(rd());
+    th = uniform_real_distribution<double>(-180, 180);
+
     for(unsigned int i=0; i<theta.size(); i++) theta[i] = RAD(th(mt));
     cout << "random initialized" << endl;
 
@@ -142,7 +199,7 @@ void test_ik2(){
     char str[256];
     double a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p;
     ifstream ifs("ik_test_set.txt");
-    ofstream ofs("ik_test_result.txt");
+    // ofstream ofs("ik_test_result.txt");
     while(ifs && ifs.getline(str, 256 - 1)){
         sscanf(str,
             "%lf, %lf, %lf, %lf,"
@@ -159,29 +216,38 @@ void test_ik2(){
                e, f, g, h,
                i, j, k, l,
                m, n, o, p;
-        auto joints = puma_ik(puma, pos);
-        for(auto e: joints){
+        auto joint = puma_ik(puma, pos);
+        cout << "joint angle ";
+        for(auto e: joint){
             cout << e << " ";
-            ofs << e << " ";
         }
         cout << endl;
-        ofs << endl;
+        // ofs << endl;
+        // output pass or not
+
+        tform res = fk(puma, joint);
+        for(int i=0; i<4; i++){
+            for(int j=0; j<4; j++){
+                if(abs(res(i, j) - pos(i, j)) < 1e-4) cout << " [pass] ";
+                else cout << " [fail] ";
+                cout << i << ' ' << j << " res:" << res(i, j) << " origin:" << pos(i, j) << " error: " << res(i, j) - pos(i, j) << endl;;
+            }
+        }
     }
 }
 
-int main(){
-    // dh link;
-    // link.n = 2;
-    // link.param = vector<vd>(2, vd({0., 1., RAD(90)}));
-    // vd theta({0, 0});
-    // cout << fk(link, theta) << endl;;
+// int main(){
+//     // dh link;
+//     // link.n = 2;
+//     // link.param = vector<vd>(2, vd({0., 1., RAD(90)}));
+//     // vd theta({0, 0});
+//     // cout << fk(link, theta) << endl;;
 
-    // dh puma = make_puma(1, 1, 1);
-    // vd theta(6, 0);
-    // cout << fk(puma, theta) << endl;
+//     // dh puma = make_puma(1, 1, 1);
+//     // vd theta(6, 0);
+//     // cout << fk(puma, theta) << endl;
 
-    test_fk();
-    test_ik2();
+//     test_ik2();
 
-    return 0;
-}
+//     return 0;
+// }
